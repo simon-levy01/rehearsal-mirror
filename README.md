@@ -39,16 +39,19 @@ Browser verification uses an installed Chrome:
 python tools/serve.py
 # In another:
 npm run test:browser
+npm run test:retrieval
 ```
 
 If Chrome is unavailable, install Playwright Chromium with `npx playwright install chromium` and set `BROWSER_CHANNEL=chromium` in the environment. The test downloads a public model, uses only synthetic data, and writes its report to `output/playwright/`.
 
+`test:retrieval` uses controlled worker replies to exercise UI races without inference or model downloads. `test:browser` separately verifies actual browser WASM retrieval. Both target the production build at http://127.0.0.1:4173.
+
 ## A two-minute demo
 
-1. Click **Load fictional demo**. The three clearly labelled stories are examples, never claimed to be yours.
+1. Click **Load fictional demo** beside the empty matching area or above the story cards. The three clearly labelled stories are examples, never claimed to be yours. Existing cards are replaced only after confirmation; loading the demo does not download the model.
 2. Select Personal assistant and the first scheduling question. Click **Download & load local AI**. Inspect per-file download status and progress. First use downloads about 50 MB of model/runtime assets, depending on transport compression. No account or token is needed.
 3. Click **Find relevant stories**. The calendar story should appear first, with a relevant excerpt copied exactly from the card. Try the customer complaint and invoice-record questions for the other two matches.
-4. Edit the STAR fields or add a real story. Write your own answer. Select 60 or 90 seconds, Start, Pause, resume or Restart. Question/role/length changes reset the timer. Restart leaves typed text intact.
+4. Write your own answer while keeping retrieved excerpts visible. Select 60 or 90 seconds, Start, Pause, resume or Restart. Answer and timer changes retain matches; changing a question or role, editing a card, or adding/removing cards clears them, so match again. Question/role/length changes reset the timer. Restart leaves typed text intact.
 5. Export a JSON backup, then try confirmed deletion and import. A deletion cancellation keeps the data. Imported files replace existing data only after confirmation and validation.
 
 ## How open-source AI is central
@@ -58,6 +61,8 @@ The official **@huggingface/transformers 3.8.1** package runs a feature-extracti
 The q8 ONNX model runs on WASM, one thread. Mean pooling and normalisation produce 384-dimensional embeddings. Cosine similarity ranks the selected question against up to 40 user cards. For the top three, the same model selects the most related STAR-field excerpt. No similarity values are presented as quality, hiring or proficiency scores. No text-generation model is used. Long input is truncated by the model (roughly 256 word pieces); concise cards work best. Retrieval can miss nuance, so review the full card.
 
 Before loading, or after a load failure, the app honestly offers **manual-only** card browsing. Downloading the model is an explicit choice. The matching feature is genuinely unavailable until inference can run.
+
+Matching returns the closest saved cards even when none answers the question. No confidence threshold or suitability verdict is inferred. The UI reminds users to review the full story and use it only if it supports a truthful answer.
 
 ## Privacy and deletion
 
