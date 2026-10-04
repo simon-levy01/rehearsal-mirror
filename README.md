@@ -6,7 +6,7 @@ A browser-local interview practice pilot for personal-assistant, customer-suppor
 
 [Try the public demo](https://rehearsal-mirror-private-pilot.simonlevy00.chatgpt.site).
 
-This repository includes application source, reproducible build/test commands and dependency licences. Generated build assets and test output are not committed. Install Node 22.12+ (or Node 24) and Python 3, then run:
+This repository includes application source, reproducible build/test commands and dependency licences. Generated build assets and raw test output are not committed. Two inspected fictional screenshots are included with the public verification note. Install Node 22.12+ (or Node 24) and Python 3, then run:
 
 ```powershell
 cd rehearsal-mirror
@@ -75,13 +75,13 @@ Matching returns the closest saved cards even when none answers the question. No
 
 ## Evidence and scope
 
-The original verification run produced a browser-check report, sanitized GET-only network log, and desktop/mobile screenshots showing live retrieval. Those generated artifacts are not committed to this source-only repository. Run `npm run test:browser` after building and serving the app to generate fresh evidence in `output/playwright/`. Desktop and 390px mobile screenshots from the original run were inspected. Form labels, visible focus, native controls, readable contrast and mobile reflow are included; no screen-reader or exhaustive WCAG audit was performed. Tested in Chrome on Windows; other browser/device combinations are unverified.
+The original verification run produced a browser-check report, sanitized GET-only network log, and desktop/mobile screenshots showing live retrieval. Two clean fictional screenshots from the retrieval follow-up are published in [the October 4 verification note](docs/verification-2026-10-04.md); generated logs and other artifacts remain excluded. Run `npm run test:browser` after building and serving the app to generate fresh evidence in `output/playwright/`. Desktop and 390px mobile screenshots from the original run were inspected. Form labels, visible focus, native controls, readable contrast and mobile reflow are included; no screen-reader or exhaustive WCAG audit was performed. Tested in Chrome on Windows; other browser/device combinations are unverified.
 
 This is a bounded prototype: 12 original questions, two timer lengths, up to 40 editable STAR cards, one answer per question, and JSON import/export. It omits audio, coaching, grammar grading, invented stories, billing and accounts.
 
 ## Development and verification status
 
-The original production build and synthetic test reports were produced on October 2, 2026; they are not included in this source-only repository. See `VERIFIED.md` for the exact scope. This source is prepared for open-source release; its presence does not establish a contest entry or eligibility. It contains no recipient feedback or personal practice records.
+The original production build and synthetic test reports were produced on October 2, 2026. See [VERIFIED.md](VERIFIED.md) for their scope and [the October 4 follow-up](docs/verification-2026-10-04.md) for the retrieval fix, clean fictional screenshots, final controlled checks, dependency advisory assessment and AI review attribution. This source is prepared for open-source release; its presence does not establish a contest entry or eligibility. It contains no recipient feedback or personal practice records.
 
 Built using OpenAI Codex. Codex provided substantial assistance with implementation, automated verification, and documentation. Review source, licenses and limitations before adapting the app. If this version is entered into a time-bounded challenge, preserve the submitted commit and identify later changes here.
 

@@ -49,7 +49,7 @@ try{
  assert.equal(await page.locator('#time').innerText(),'90');
  check('Answer typing, duration, timer start/pause/restart preserve retrieved excerpts');
 
- const inFlight=await rank();await page.locator('#answer').fill('Synthetic answer typed during retrieval.');await page.locator('#duration').selectOption('60');await reply(inFlight);
+ const inFlight=await rank();await page.locator('#answer').fill('Synthetic answer typed during retrieval.');await page.locator('#duration').selectOption('60');await page.locator('#start').click();await page.locator('#start').click();await page.locator('#restart').click();await reply(inFlight);
  assert.equal(await page.locator('.match').count(),1);
  check('Answer and timer edits during an in-flight request still allow its current reply');
 
@@ -80,12 +80,21 @@ try{
  await page.evaluate(()=>{window.__oldWorker=window.__testWorker;});
  page.once('dialog',d=>d.accept());await page.locator('#cache').click();
  await page.waitForFunction(()=>document.querySelector('#model-status').textContent.includes('Model cache cleared'));
- await page.evaluate(()=>window.__oldWorker.reply({type:'ready'}));await reply(unloadedRequest);
+ await page.evaluate(()=>{window.__oldWorker.reply({type:'ready'});window.__oldWorker.reply({type:'progress',progress:{status:'stale',file:'stale'}});window.__oldWorker.reply({type:'error',message:'Stale load error'});window.__oldWorker.onerror(new Event('error'));});await reply(unloadedRequest);
  assert.match(await page.locator('#model-status').innerText(),/Manual mode/);assert.equal(await page.locator('.match').count(),0);assert.equal(await page.locator('#rank').isDisabled(),true);
  check('Replies from an unloaded worker cannot reactivate matching or restore cleared results');
 
+ await page.locator('#load').click();await page.waitForFunction(()=>document.querySelector('#model-status').textContent.startsWith('Local AI ready'));await matched();
+ await page.evaluate(()=>{window.__cacheKeys=caches.keys.bind(caches);caches.keys=async()=>{throw new Error('Controlled cache API failure');};});
+ page.once('dialog',d=>d.accept());await page.locator('#cache').click();await page.waitForFunction(()=>document.querySelector('#model-status').textContent.includes('could not be cleared'));
+ assert.equal(await page.locator('#load').isEnabled(),true);assert.equal(await page.locator('#rank').isDisabled(),true);assert.equal(await page.locator('.match').count(),0);assert.match(await page.locator('#model-status').innerText(),/manual mode/);
+ await page.evaluate(()=>{caches.keys=window.__cacheKeys;});await page.locator('#load').click();await page.waitForFunction(()=>document.querySelector('#model-status').textContent.startsWith('Local AI ready'));
+ check('Cache API failure unloads AI honestly and restores a working download/retry control');
+
+ const savedQuestion=await page.locator('#question').inputValue(),savedRole=await page.locator('#role').inputValue();
  await page.locator('#answer').fill('Synthetic saved answer survives refresh.');await page.locator('#duration').selectOption('90');await page.reload();
  assert.equal(await page.locator('#answer').inputValue(),'Synthetic saved answer survives refresh.');assert.equal(await page.locator('#duration').inputValue(),'90');
+ assert.equal(await page.locator('#question').inputValue(),savedQuestion);assert.equal(await page.locator('#role').inputValue(),savedRole);
  assert.match(await page.locator('#model-status').innerText(),/Manual mode/);assert.equal(await page.locator('.match').count(),0);
  check('Refresh preserves the current answer, selected query and duration without claiming restored inference');
 
