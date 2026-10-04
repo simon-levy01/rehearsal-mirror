@@ -3,11 +3,31 @@
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
+const baseURL=new URL(process.env.TEST_BASE_URL||'http://127.0.0.1:4173');
+assert.ok(['http:','https:'].includes(baseURL.protocol),'TEST_BASE_URL must use HTTP or HTTPS');
 await fs.mkdir('output/playwright',{recursive:true});
 const browser=await chromium.launch({headless:true,channel:process.env.BROWSER_CHANNEL||'chrome'});
-const context=await browser.newContext({viewport:{width:1280,height:900}});
+const context=await browser.newContext({viewport:{width:1280,height:900},serviceWorkers:'block'});
+const requests=[],unexpectedRequests=[],blockedInfrastructureRequests=[];
+await context.route('**/*',async route=>{
+ const request=route.request(),url=new URL(request.url());
+ const challengePost=url.origin===baseURL.origin&&request.method()==='POST'&&url.pathname.startsWith('/cdn-cgi/challenge-platform/');
+ const record={method:request.method(),url:challengePost?url.origin+'/cdn-cgi/challenge-platform/[redacted]':request.url(),resourceType:request.resourceType()};
+ requests.push(record);
+ if(url.origin!==baseURL.origin||request.method()!=='GET'||/(?:^|\/)embedding\.worker(?:[-.]|$)/i.test(url.pathname)||/\.(wasm|onnx)(?:$|\/)/i.test(url.pathname)){
+  if(challengePost){
+   blockedInfrastructureRequests.push(record);
+  }else unexpectedRequests.push(record);
+  await route.abort();
+ }else await route.continue();
+});
+await context.routeWebSocket('**/*',socket=>{
+ unexpectedRequests.push({method:'WEBSOCKET',url:socket.url(),resourceType:'websocket'});
+ socket.close();
+});
 await context.addInitScript(()=>{
  window.__workerRequests=[];
+ window.SharedWorker=class {constructor(){throw new Error('SharedWorker is forbidden in controlled UI tests');}};
  window.Worker=class {
   constructor(){window.__testWorker=this;}
   postMessage(data){if(data.type==='load')queueMicrotask(()=>this.onmessage({data:{type:'ready'}}));else window.__workerRequests.push(data);}
@@ -25,7 +45,7 @@ const reply=async(request,type='ranked')=>{
 };
 const matched=async()=>{const request=await rank();await reply(request);assert.equal(await page.locator('.match').count(),1);return request;};
 try{
- await page.goto('http://127.0.0.1:4173');
+ await page.goto(baseURL.href);
  assert.equal(await page.title(),'Rehearsal Mirror');
  assert.match(await page.locator('#results').innerText(),/No story cards yet/);
  assert.equal(await page.locator('#results-demo').isVisible(),true);
@@ -103,7 +123,8 @@ try{
  await page.setViewportSize({width:390,height:844});
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  assert.deepEqual(errors,[]);
+ assert.deepEqual(unexpectedRequests,[],'Only same-origin GET requests for the static app are allowed; no worker/model downloads');
  check('Closest-card caveat is unconditional; mobile fits; no uncaught page errors');
- await fs.writeFile('output/playwright/retrieval-regressions.json',JSON.stringify({date:new Date().toISOString(),browserVersion:browser.version(),nodeVersion:process.version,worker:'controlled fake; no inference',results,errors},null,2));
+ await fs.writeFile('output/playwright/retrieval-regressions.json',JSON.stringify({date:new Date().toISOString(),target:baseURL.href,browserVersion:browser.version(),nodeVersion:process.version,worker:'controlled fake; no inference',results,errors,requests,unexpectedRequests,blockedInfrastructureRequests},null,2));
  console.log(JSON.stringify(results,null,2));
 }finally{await browser.close();}

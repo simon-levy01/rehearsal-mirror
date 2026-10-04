@@ -46,6 +46,16 @@ If Chrome is unavailable, install Playwright Chromium with `npx playwright insta
 
 `test:retrieval` uses controlled worker replies to exercise UI races without inference or model downloads. `test:browser` separately verifies actual browser WASM retrieval. Both target the production build at http://127.0.0.1:4173.
 
+The controlled suite also supports a hosted target, without a local server:
+
+```powershell
+$env:TEST_BASE_URL = 'https://rehearsal-mirror-private-pilot.simonlevy00.chatgpt.site'
+npm run test:retrieval
+Remove-Item Env:TEST_BASE_URL
+```
+
+It blocks external-origin HTTP requests, non-GET traffic, embedding-worker/model downloads and WebSockets; dedicated workers are stubbed and shared/service workers are disabled. Same-origin Cloudflare challenge POST attempts are recorded separately and remain blocked. Its generated report records the target and intercepted requests. This verifies UI behavior with controlled replies, not hosted model loading or ranking.
+
 ## A two-minute demo
 
 1. Click **Load fictional demo** beside the empty matching area or above the story cards. The three clearly labelled stories are examples, never claimed to be yours. Existing cards are replaced only after confirmation; loading the demo does not download the model.
